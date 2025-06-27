@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plano Completo de Semestres</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: "Inter", sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Alinha ao topo */
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .main-container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            width: 100%;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 8px 10px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+            vertical-align: middle;
+            height: 40px; /* Altura fixa para as células de horário */
+        }
+        th {
+            background-color: #4f46e5;
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        td {
+            background-color: #f8fafc;
+            color: #334155;
+        }
+        /* Aplica bordas arredondadas apenas ao container da tabela, não às células individuais */
+        .rounded-table-container {
+            border-radius: 8px;
+            overflow: hidden; /* Garante que as bordas arredondadas funcionem */
+        }
+
+        /* Estilo para células de aula para destacá-las */
+        td.class-slot {
+            background-color: #a78bfa; /* Cor de fundo mais escura para aulas */
+            color: white;
+            font-weight: 600;
+        }
+        /* Estilo para células de intervalo */
+        td.interval-slot {
+            background-color: #d1d5db; /* Cor para intervalos */
+            color: #4b5563;
+            font-style: italic;
+        }
+
+        /* Estilo para a tabela de planos futuros */
+        .future-plans-table th {
+            background-color: #10b981; /* Uma cor diferente para a seção de planos */
+        }
+        .future-plans-table td ul {
+            list-style-type: disc;
+            padding-left: 20px;
+            text-align: left; /* Alinha o texto da lista à esquerda */
+        }
+
+        @media (max-width: 768px) {
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+            thead tr {
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+            tr {
+                margin-bottom: 15px;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            td {
+                border: none;
+                position: relative;
+                padding-left: 50%;
+                text-align: right;
+                height: auto;
+                min-height: 40px;
+            }
+            td:before {
+                position: absolute;
+                top: 0;
+                left: 6px;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                text-align: left;
+                font-weight: 600;
+                color: #4f46e5;
+            }
+            /* Conteúdo dos "before" para cada coluna no mobile - Agenda 2025/2 */
+            .semester-2025-2-table td:nth-of-type(1):before { content: "Horário"; }
+            .semester-2025-2-table td:nth-of-type(2):before { content: "Segunda-feira"; }
+            .semester-2025-2-table td:nth-of-type(3):before { content: "Terça-feira"; }
+            .semester-2025-2-table td:nth-of-type(4):before { content: "Quarta-feira"; }
+            .semester-2025-2-table td:nth-of-type(5):before { content: "Quinta-feira"; }
+            .semester-2025-2-table td:nth-of-type(6):before { content: "Sexta-feira"; }
+
+            /* Conteúdo dos "before" para cada coluna no mobile - Planos Futuros */
+            .future-plans-table td:nth-of-type(1):before { content: "Semestre"; }
+            .future-plans-table td:nth-of-type(2):before { content: "Disciplinas / Planejamento"; }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Plano Completo de Semestres</h1>
+        <p class="text-center text-gray-600 mb-8">Sua agenda detalhada para 2025/2 e planos futuros.</p>
+
+        <!-- Agenda Detalhada do Semestre 2025/2 -->
+        <h2 class="text-2xl font-semibold text-gray-700 mb-4 mt-8 text-center">Agenda Detalhada do Semestre 2025/2</h2>
+        <div class="overflow-x-auto rounded-lg shadow rounded-table-container semester-2025-2-table">
+            <table class="min-w-full">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-2">Horário</th>
+                        <th class="px-4 py-2">Segunda-feira</th>
+                        <th class="px-4 py-2">Terça-feira</th>
+                        <th class="px-4 py-2">Quarta-feira</th>
+                        <th class="px-4 py-2">Quinta-feira</th>
+                        <th class="px-4 py-2">Sexta-feira</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 07:30 - 08:20 -->
+                    <tr>
+                        <td>07:30 - 08:20</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <!-- 08:20 - 10:00 (BAN2 - 2 tempos de 50min) -->
+                    <tr>
+                        <td>08:20 - 09:10</td>
+                        <td class="class-slot" rowspan="2">BAN2<br>(8:20 - 10:00)</td>
+                        <td></td>
+                        <td class="class-slot" rowspan="2">BAN2<br>(8:20 - 10:00)</td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>09:10 - 10:00</td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <!-- 10:00 - 10:50 -->
+                    <tr>
+                        <td>10:00 - 10:50</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <!-- 10:50 - 11:40 -->
+                    <tr>
+                        <td>10:50 - 11:40</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <!-- 11:40 - 12:30 -->
+                    <tr>
+                        <td>11:40 - 12:30</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <!-- 12:30 - 13:20 -->
+                    <tr>
+                        <td>12:30 - 13:20</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <!-- 13:20 - 13:30 (Pequeno intervalo ou transição) -->
+                    <tr>
+                        <td>13:20 - 13:30</td>
+                        <td colspan="5" class="interval-slot">Intervalo / Transição</td>
+                    </tr>
+                    <!-- 13:30 - 15:10 (PES / REDES - 2 tempos de 50min) -->
+                    <tr>
+                        <td>13:30 - 14:20</td>
+                        <td class="class-slot" rowspan="2">PES<br>(13:30 - 15:10)</td>
+                        <td class="class-slot" rowspan="2">REDES<br>(13:30 - 15:10)</td>
+                        <td class="class-slot" rowspan="2">PES<br>(13:30 - 15:10)</td>
+                        <td class="class-slot" rowspan="2">REDES<br>(13:30 - 15:10)</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>14:20 - 15:10</td>
+                        <td></td>
+                    </tr>
+                    <!-- 15:10 - 15:20 (Pequeno intervalo ou transição) -->
+                    <tr>
+                        <td>15:10 - 15:20</td>
+                        <td colspan="5" class="interval-slot">Intervalo / Transição</td>
+                    </tr>
+                    <!-- 15:20 - 17:00 (TEC / MEP - 2 tempos de 50min) -->
+                    <tr>
+                        <td>15:20 - 16:10</td>
+                        <td class="class-slot" rowspan="2">TEC<br>(15:20 - 17:00)</td>
+                        <td class="class-slot" rowspan="2">MEP<br>(15:20 - 17:00)</td>
+                        <td class="class-slot" rowspan="2">TEC<br>(15:20 - 17:00)</td>
+                        <td class="class-slot" rowspan="2">MEP<br>(15:20 - 17:00)</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>16:10 - 17:00</td>
+                        <td></td>
+                    </tr>
+                    <!-- 17:00 - 17:50 -->
+                    <tr>
+                        <td>17:00 - 17:50</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <!-- 17:50 - 18:40 -->
+                    <tr>
+                        <td>17:50 - 18:40</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <!-- 18:40 - 19:00 (Pequeno intervalo ou transição) -->
+                    <tr>
+                        <td>18:40 - 19:00</td>
+                        <td colspan="5" class="interval-slot">Intervalo / Transição</td>
+                    </tr>
+                    <!-- 19:00 - 22:30 (OTES - spans multiple 50min blocks) -->
+                    <tr>
+                        <td>19:00 - 19:50</td>
+                        <td></td>
+                        <td class="class-slot" rowspan="4">OTES<br>(19:00 - 22:30)</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>19:50 - 20:40</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>20:40 - 21:30</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>21:30 - 22:20</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <!-- Adicione um pequeno slot para os últimos 10 minutos de OTES se necessário ou aponte a finalização -->
+                    <tr>
+                        <td>22:20 - 23:10</td> <!-- Este slot representa o período final, OTES termina às 22:30 -->
+                        <td></td>
+                        <td class="interval-slot">Término OTES (22:30)</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Próximos Semestres - Planos -->
+        <h2 class="text-2xl font-semibold text-gray-700 mb-4 mt-12 text-center">Próximos Semestres - Planos</h2>
+        <div class="overflow-x-auto rounded-lg shadow rounded-table-container">
+            <table class="min-w-full future-plans-table">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-2">Semestre</th>
+                        <th class="px-4 py-2">Disciplinas / Planejamento</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>2026/1</td>
+                        <td>
+                            <ul class="list-disc pl-5">
+                                <li>SDI</li>
+                                <li>IAR</li>
+                                <li>MFO</li>
+                                <li>ACT</li>
+                                <li>OPT (Opcional)</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>2026/2</td>
+                        <td>
+                            <ul class="list-disc pl-5">
+                                <li>TCC (Trabalho de Conclusão de Curso)</li>
+                                <li>OPT (Opcional)</li>
+                                <li>OPT (Opcional)</li>
+                                <li>OPT (Opcional)</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>2027/1</td>
+                        <td>
+                            <ul class="list-disc pl-5">
+                                <li>TCC (Trabalho de Conclusão de Curso)</li>
+                                <li>OPT (Opcional)</li>
+                                <li>OPT (Opcional)</li>
+                                <li>OPT (Opcional)</li>
+                            </ul>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
