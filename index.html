@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minha Agenda Semanal Interativa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals with Subtle Accents -->
+    <!-- Application Structure Plan: A single-page dashboard with persistent storage via localStorage. Key interactions include adding, editing, and deleting events through a modal form. The structure remains a top navigation bar, a summary chart, and daily timelines. This design enhances the app from a static view to a dynamic, personalizable scheduling tool. -->
+    <!-- Visualization & Content Choices: 
+        - CRUD Functionality: (Goal: Organize/Interact) -> A modal form for creating/updating events, and delete buttons on each event card. Justification: Standard and intuitive UX for data management.
+        - Persistent Data: (Goal: Inform/Organize) -> Data is stored in localStorage. Justification: Allows user changes to persist across sessions without a backend, perfect for a personal tool hosted on GitHub Pages.
+        - Visualizations (Chart/Timeline): Unchanged, but now dynamically re-render whenever the source data is modified by the user.
+        - Library/Method: Chart.js (Canvas), HTML/CSS/JS for all interactions and data management. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 384px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 20rem;
+            max-height: 400px;
+        }
+        .nav-button.active {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .event-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .timeline::before {
+            content: ''; position: absolute; left: 18px; top: 0; bottom: 0; width: 4px; background-color: #e2e8f0; border-radius: 2px;
+        }
+        .timeline-item::before {
+            content: ''; position: absolute; left: 12px; top: 12px; width: 16px; height: 16px; border-radius: 9999px; background-color: white; border: 4px solid #94a3b8;
+        }
+        .now-line {
+            position: absolute; left: 4rem; right: 0; height: 2px; background-color: #ef4444; z-index: 10; transition: top 1s linear;
+        }
+        .now-line::before {
+            content: 'AGORA'; position: absolute; left: -3.5rem; top: -0.6rem; font-size: 0.75rem; font-weight: 600; color: #ef4444; background-color: #f8fafc; padding: 0 4px;
+        }
+        .modal-backdrop {
+            transition: opacity 0.3s ease;
+        }
+        .modal-content {
+            transition: transform 0.3s ease;
+        }
+    </style>
+</head>
+<body class="text-slate-700">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <header class="text-center mb-8">
+            <div class="flex justify-center items-center gap-4 mb-4">
+                <h1 class="text-4xl font-bold text-slate-800">Minha Agenda Semanal</h1>
+                <button id="add-event-button" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                    Adicionar Compromisso
+                </button>
+            </div>
+            <p class="mt-2 text-lg text-slate-500">Uma visão interativa e editável da sua rotina.</p>
+        </header>
+
+        <section id="summary" class="mb-12">
+            <h2 class="text-2xl font-bold text-slate-800 text-center mb-4">Distribuição do seu Tempo</h2>
+            <div class="chart-container">
+                <canvas id="timeDistributionChart"></canvas>
+            </div>
+        </section>
+
+        <nav class="sticky top-0 z-20 bg-slate-50/80 backdrop-blur-sm py-4 mb-8">
+            <div id="nav-container" class="flex flex-wrap justify-center gap-2"></div>
+        </nav>
+
+        <main id="schedule-container" class="space-y-12"></main>
+    </div>
+
+    <!-- Modal for Add/Edit Event -->
+    <div id="event-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 modal-backdrop hidden">
+        <div class="modal-content bg-white rounded-lg shadow-xl p-6 w-full max-w-md m-4 transform scale-95">
+            <h2 id="modal-title" class="text-2xl font-bold mb-4">Adicionar Compromisso</h2>
+            <form id="event-form">
+                <input type="hidden" id="event-id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label for="title" class="block text-sm font-medium text-slate-700">Título</label>
+                        <input type="text" id="title" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
+                    </div>
+                    <div>
+                        <label for="day" class="block text-sm font-medium text-slate-700">Dia</label>
+                        <select id="day" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required></select>
+                    </div>
+                    <div>
+                        <label for="category" class="block text-sm font-medium text-slate-700">Categoria</label>
+                        <select id="category" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required></select>
+                    </div>
+                    <div>
+                        <label for="start" class="block text-sm font-medium text-slate-700">Início</label>
+                        <input type="time" id="start" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
+                    </div>
+                    <div>
+                        <label for="end" class="block text-sm font-medium text-slate-700">Fim</label>
+                        <input type="time" id="end" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="details" class="block text-sm font-medium text-slate-700">Detalhes</label>
+                        <input type="text" id="details" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                     <div class="md:col-span-2">
+                        <label for="location" class="block text-sm font-medium text-slate-700">Local</label>
+                        <input type="text" id="location" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end gap-4">
+                    <button type="button" id="cancel-button" class="px-4 py-2 bg-slate-200 text-slate-800 rounded-md hover:bg-slate-300">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const defaultSchedule = [
+            { day: 'Segunda-feira', start: '08:20', end: '10:10', title: 'Aula: BAN2002', category: 'Aulas', details: 'Teórica', location: 'F302' },
+            { day: 'Segunda-feira', start: '13:30', end: '15:10', title: 'Aula: PES0003', category: 'Aulas', details: 'Teórica', location: 'F205' },
+            { day: 'Segunda-feira', start: '15:20', end: '17:00', title: 'Aula: TEC0002', category: 'Aulas', details: 'Teórica', location: 'Sala de aula F107' },
+            { day: 'Segunda-feira', start: '17:00', end: '18:00', title: 'Trabalho', category: 'Trabalho', details: '', location: '' },
+            { day: 'Segunda-feira', start: '18:00', end: '22:00', title: 'Estudo: Treinos Upsolve', category: 'Estudo', details: '', location: '' },
+            { day: 'Terça-feira', start: '13:30', end: '15:10', title: 'Aula: REC0003', category: 'Aulas', details: 'Teórica', location: 'F205' },
+            { day: 'Terça-feira', start: '15:20', end: '17:00', title: 'Aula: MEP0004', category: 'Aulas', details: 'Teórica', location: 'F302' },
+            { day: 'Terça-feira', start: '17:00', end: '18:00', title: 'Trabalho', category: 'Trabalho', details: '', location: '' },
+            { day: 'Terça-feira', start: '18:00', end: '22:00', title: 'Estudo: Treinos Upsolve', category: 'Estudo', details: '', location: '' },
+            { day: 'Quarta-feira', start: '08:20', end: '10:10', title: 'Aula: BAN2002', category: 'Aulas', details: 'Prática', location: 'F302' },
+            { day: 'Quarta-feira', start: '13:30', end: '15:10', title: 'Aula: PES0003', category: 'Aulas', details: 'Teórica', location: 'F205' },
+            { day: 'Quarta-feira', start: '15:20', end: '17:00', title: 'Aula: TEC0002', category: 'Aulas', details: 'Prática', location: 'Sala de aula F107' },
+            { day: 'Quarta-feira', start: '17:00', end: '18:00', title: 'Trabalho', category: 'Trabalho', details: '', location: '' },
+            { day: 'Quarta-feira', start: '18:00', end: '22:00', title: 'Estudo: Treinos Upsolve', category: 'Estudo', details: '', location: '' },
+            { day: 'Quinta-feira', start: '13:30', end: '15:10', title: 'Aula: REC0003', category: 'Aulas', details: 'Prática', location: 'F205' },
+            { day: 'Quinta-feira', start: '15:20', end: '17:00', title: 'Aula: MEP0004', category: 'Aulas', details: 'Teórica', location: 'F302' },
+            { day: 'Quinta-feira', start: '17:00', end: '18:00', title: 'Trabalho', category: 'Trabalho', details: '', location: '' },
+            { day: 'Quinta-feira', start: '18:00', end: '22:00', title: 'Estudo: Treinos Upsolve', category: 'Estudo', details: '', location: '' },
+            { day: 'Sexta-feira', start: '14:00', end: '19:00', title: 'Treino Maratona', category: 'Treino', details: '', location: '' },
+            { day: 'Sexta-feira', start: '19:00', end: '20:00', title: 'Estudo: Treinos Upsolve', category: 'Estudo', details: '', location: '' },
+            { day: 'Sexta-feira', start: '20:00', end: '21:00', title: 'Trabalho', category: 'Trabalho', details: '', location: '' },
+            { day: 'Sexta-feira', start: '21:00', end: '22:00', title: 'Estudo: Treinos Upsolve', category: 'Estudo', details: '', location: '' },
+            { day: 'Sábado', start: '14:30', end: '15:30', title: 'Ensaio', category: 'Pessoal/Religioso', details: '', location: '' },
+            { day: 'Sábado', start: '15:30', end: '16:15', title: 'Louvor', category: 'Pessoal/Religioso', details: '', location: '' },
+            { day: 'Sábado', start: '16:15', end: '17:30', title: 'Palavra', category: 'Pessoal/Religioso', details: '', location: '' },
+            { day: 'Sábado', start: '17:30', end: '18:30', title: 'GP', category: 'Pessoal/Religioso', details: '', location: '' },
+            { day: 'Sábado', start: '20:00', end: '22:00', title: 'Culto Jovens', category: 'Pessoal/Religioso', details: '', location: '' },
+            { day: 'Domingo', start: '18:00', end: '20:00', title: 'Culto', category: 'Pessoal/Religioso', details: 'Estimativa de 2h', location: '' },
+        ];
+        
+        let scheduleData = [];
+        let timeDistributionChart = null;
+
+        const daysOfWeek = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
+        const categories = ['Aulas', 'Trabalho', 'Estudo', 'Treino', 'Pessoal/Religioso', 'Outro'];
+        const categoryColors = {
+            'Aulas': 'border-blue-500', 'Trabalho': 'border-green-500', 'Estudo': 'border-amber-500', 'Treino': 'border-purple-500', 'Pessoal/Religioso': 'border-rose-500', 'Outro': 'border-slate-400'
+        };
+        const categoryBgColors = {
+            'Aulas': '#3b82f6', 'Trabalho': '#22c55e', 'Estudo': '#f59e0b', 'Treino': '#a855f7', 'Pessoal/Religioso': '#f43f5e', 'Outro': '#94a3b8'
+        };
+
+        const modal = document.getElementById('event-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const eventForm = document.getElementById('event-form');
+        const daySelect = document.getElementById('day');
+        const categorySelect = document.getElementById('category');
+
+        function parseTime(timeStr) { return timeStr.split(':').map(Number).reduce((h, m) => h * 60 + m); }
+        function getDurationInHours(start, end) { return (parseTime(end) - parseTime(start)) / 60; }
+        
+        function saveSchedule() {
+            localStorage.setItem('myWeeklySchedule', JSON.stringify(scheduleData));
+        }
+
+        function loadSchedule() {
+            const saved = localStorage.getItem('myWeeklySchedule');
+            scheduleData = saved ? JSON.parse(saved) : defaultSchedule.map((e, i) => ({...e, id: i}));
+            saveSchedule();
+        }
+
+        function openModal(eventIndex = null) {
+            eventForm.reset();
+            if (eventIndex !== null) {
+                modalTitle.textContent = 'Editar Compromisso';
+                const event = scheduleData[eventIndex];
+                document.getElementById('event-id').value = eventIndex;
+                document.getElementById('title').value = event.title;
+                document.getElementById('day').value = event.day;
+                document.getElementById('start').value = event.start;
+                document.getElementById('end').value = event.end;
+                document.getElementById('category').value = event.category;
+                document.getElementById('details').value = event.details || '';
+                document.getElementById('location').value = event.location || '';
+            } else {
+                modalTitle.textContent = 'Adicionar Compromisso';
+                document.getElementById('event-id').value = '';
+            }
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.firstElementChild.classList.replace('scale-95', 'scale-100'), 10);
+        }
+
+        function closeModal() {
+            modal.firstElementChild.classList.replace('scale-100', 'scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+        
+        function handleDelete(eventIndex) {
+            if (confirm('Tem certeza que deseja excluir este compromisso?')) {
+                scheduleData.splice(eventIndex, 1);
+                saveSchedule();
+                renderApp();
+            }
+        }
+
+        function renderApp() {
+            const scheduleContainer = document.getElementById('schedule-container');
+            const navContainer = document.getElementById('nav-container');
+            scheduleContainer.innerHTML = '';
+            navContainer.innerHTML = '';
+
+            daysOfWeek.forEach(day => {
+                const dayEvents = scheduleData.map((e, i) => ({...e, originalIndex: i}))
+                                            .filter(e => e.day === day)
+                                            .sort((a, b) => parseTime(a.start) - parseTime(b.start));
+
+                const daySection = document.createElement('section');
+                daySection.id = day.toLowerCase().replace('-feira', '');
+                daySection.className = 'p-4 md:p-6 bg-white rounded-xl shadow-md';
+                daySection.innerHTML = `<h3 class="text-2xl font-bold text-slate-800 mb-6">${day}</h3>`;
+
+                const timelineContainer = document.createElement('div');
+                timelineContainer.className = 'relative timeline';
+
+                if (dayEvents.length > 0) {
+                    dayEvents.forEach(event => {
+                        const item = document.createElement('div');
+                        item.className = 'relative pl-16 pb-8 timeline-item';
+                        
+                        const cardContent = `
+                            <p class="absolute left-0 top-2.5 text-xs font-semibold text-slate-500 w-12 text-right pr-2">${event.start}</p>
+                            <div class="event-card bg-slate-50 p-4 rounded-lg shadow-sm border-l-4 transition-all ${categoryColors[event.category] || categoryColors.Outro}">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h4 class="font-bold text-slate-800">${event.title}</h4>
+                                        ${event.details ? `<p class="text-sm text-slate-600">${event.details}</p>` : ''}
+                                        ${event.location ? `<p class="text-sm text-slate-500 mt-1">📍 ${event.location}</p>` : ''}
+                                    </div>
+                                    <div class="flex gap-2 flex-shrink-0 ml-2">
+                                        <button class="edit-btn text-xs text-blue-500 hover:text-blue-700 font-semibold" data-index="${event.originalIndex}">Editar</button>
+                                        <button class="delete-btn text-xs text-red-500 hover:text-red-700 font-semibold" data-index="${event.originalIndex}">Excluir</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        item.innerHTML = cardContent;
+                        timelineContainer.appendChild(item);
+                    });
+                } else {
+                    timelineContainer.innerHTML = '<p class="text-slate-500 pl-16">Nenhum compromisso agendado.</p>';
+                }
+                
+                daySection.appendChild(timelineContainer);
+                scheduleContainer.appendChild(daySection);
+
+                const navButton = document.createElement('button');
+                navButton.className = 'nav-button px-4 py-2 rounded-md font-semibold text-sm text-slate-600 bg-white shadow-sm hover:bg-slate-100 transition-colors';
+                navButton.textContent = day;
+                navButton.onclick = () => daySection.scrollIntoView({ behavior: 'smooth' });
+                navContainer.appendChild(navButton);
+            });
+
+            document.querySelectorAll('.edit-btn').forEach(btn => btn.onclick = () => openModal(parseInt(btn.dataset.index)));
+            document.querySelectorAll('.delete-btn').forEach(btn => btn.onclick = () => handleDelete(parseInt(btn.dataset.index)));
+            
+            renderTimeDistributionChart();
+            updateNowLine();
+            updateActiveNav();
+        }
+
+        function renderTimeDistributionChart() {
+            const categoryTotals = {};
+            scheduleData.forEach(event => {
+                const duration = getDurationInHours(event.start, event.end);
+                if (!categoryTotals[event.category]) categoryTotals[event.category] = 0;
+                categoryTotals[event.category] += duration;
+            });
+
+            const ctx = document.getElementById('timeDistributionChart').getContext('2d');
+            if(timeDistributionChart) {
+                timeDistributionChart.destroy();
+            }
+            timeDistributionChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(categoryTotals),
+                    datasets: [{
+                        data: Object.values(categoryTotals),
+                        backgroundColor: Object.keys(categoryTotals).map(cat => categoryBgColors[cat] || categoryBgColors.Outro),
+                        borderColor: '#f8fafc',
+                        borderWidth: 4,
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { padding: 20, font: { family: "'Inter', sans-serif" } } },
+                        tooltip: { callbacks: { label: c => `${c.label}: ${c.parsed.toFixed(1)} horas` } }
+                    }
+                }
+            });
+        }
+
+        function updateNowLine() {
+            document.querySelectorAll('.now-line').forEach(l => l.remove());
+            const now = new Date();
+            const currentDayName = daysOfWeek[(now.getDay() + 6) % 7];
+            const currentDaySection = document.getElementById(currentDayName.toLowerCase().replace('-feira', ''));
+            if (!currentDaySection) return;
+
+            const timeline = currentDaySection.querySelector('.timeline');
+            const dayEvents = scheduleData.filter(e => e.day === currentDayName);
+            if (!timeline || dayEvents.length === 0) return;
+
+            const nowInMinutes = now.getHours() * 60 + now.getMinutes();
+            const timelineStart = parseTime(dayEvents.sort((a,b) => parseTime(a.start) - parseTime(b.start))[0].start);
+            const timelineEnd = parseTime(dayEvents.sort((a,b) => parseTime(b.end) - parseTime(a.end))[0].end);
+
+            if (nowInMinutes >= timelineStart && nowInMinutes <= timelineEnd) {
+                const totalHeight = timeline.offsetHeight;
+                const percentageThrough = (nowInMinutes - timelineStart) / (timelineEnd - timelineStart);
+                const topPosition = percentageThrough * totalHeight;
+                const nowLine = document.createElement('div');
+                nowLine.className = 'now-line';
+                nowLine.style.top = `${topPosition}px`;
+                timeline.appendChild(nowLine);
+            }
+        }
+
+        function updateActiveNav() {
+            let current = '';
+            document.querySelectorAll('main section').forEach(section => {
+                if (pageYOffset >= section.offsetTop - 150) current = section.id;
+            });
+            document.querySelectorAll('.nav-button').forEach(button => {
+                button.classList.toggle('active', button.textContent.toLowerCase().replace('-feira', '') === current);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSchedule();
+            
+            daysOfWeek.forEach(d => daySelect.add(new Option(d, d)));
+            categories.forEach(c => categorySelect.add(new Option(c, c)));
+            
+            document.getElementById('add-event-button').onclick = () => openModal();
+            document.getElementById('cancel-button').onclick = closeModal;
+            modal.onclick = (e) => { if(e.target === modal) closeModal(); };
+
+            eventForm.onsubmit = (e) => {
+                e.preventDefault();
+                const id = document.getElementById('event-id').value;
+                const newEvent = {
+                    day: document.getElementById('day').value,
+                    start: document.getElementById('start').value,
+                    end: document.getElementById('end').value,
+                    title: document.getElementById('title').value,
+                    category: document.getElementById('category').value,
+                    details: document.getElementById('details').value,
+                    location: document.getElementById('location').value,
+                };
+
+                if (id) {
+                    scheduleData[id] = {...scheduleData[id], ...newEvent};
+                } else {
+                    newEvent.id = new Date().getTime();
+                    scheduleData.push(newEvent);
+                }
+                
+                saveSchedule();
+                renderApp();
+                closeModal();
+            };
+
+            renderApp();
+            setInterval(updateNowLine, 60000);
+            window.addEventListener('scroll', updateActiveNav);
+        });
+    </script>
+</body>
+</html>
